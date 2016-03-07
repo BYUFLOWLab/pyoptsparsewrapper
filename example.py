@@ -1,5 +1,5 @@
 from pyoptwrapper import optimize
-from pyoptsparse import NSGA2, SNOPT, NLPQLP, ALPSO
+from pyoptsparse import NSGA2, SNOPT, NLPQLP, ALPSO, SLSQP
 from math import exp
 import numpy as np
 
@@ -39,6 +39,11 @@ optimizer = NLPQLP()
 
 xopt, fopt, info = optimize(rosen, x0, lb, ub, optimizer)
 print 'NLPQLP:', xopt, fopt, info
+
+optimizer = SLSQP()
+
+xopt, fopt, info = optimize(rosen, x0, lb, ub, optimizer)
+print 'SLSQP:', xopt, fopt, info
 
 optimizer = ALPSO()
 
