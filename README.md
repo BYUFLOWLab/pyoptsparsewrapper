@@ -19,7 +19,11 @@ Other additions include:
 
 Syntax is similar to Matlab's fmincon, except the linear constraints are optional arguments:
 
-`xopt, fopt, info = optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[])`
+```python
+from pyoptwrapper import optimize
+
+xopt, fopt, info = optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[])
+```
 
 See example.py for examples.
 
