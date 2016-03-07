@@ -21,6 +21,10 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
     nc = len(c)
     nlin = len(b)
     nleq = len(beq)
+    if hasattr(f, "__len__"):
+        nf = len(f)  # multiobjective
+    else:
+        nf = 1
 
 
     def objcon(xdict):
@@ -40,8 +44,13 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
         else:
             f, c = func(x)
 
-        outputs['obj'] = f
         outputs['con'] = c
+
+        if nf == 1:
+            outputs['obj'] = f
+        else:  # multiobjective
+            for i in range(nf):
+                outputs['obj%d' % i] = f[i]
 
         fail = False
 
@@ -59,7 +68,7 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
             df = fdict['g-obj']
             dc = fdict['g-con']
 
-        # populate gradients
+        # populate gradients (the multiobjective optimizers don't use gradients so no change needed here)
         gout = {}
         gout['obj'] = {}
         gout['obj']['x'] = df
@@ -75,7 +84,13 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
 
     # setup problem
     optProb = Optimization('optimization', objcon)
-    optProb.addObj('obj')
+
+    if nf == 1:
+        optProb.addObj('obj')
+    else:  # multiobjective
+        for i in range(nf):
+            optProb.addObj('obj%d' % i)
+
     optProb.addVarGroup('x', nx, lower=lb, upper=ub, value=x0)
 
     # add nonlinear constraints
@@ -119,11 +134,35 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
         for i in range(nx):
             xstar[i] = xtemp[i, 0]
 
-    # FIXME: because of bug exists in all except SNOPT
-    if optimizer.name != 'SNOPT':
-        if gradients:
-            fstar, cstar, _, _ = func(xstar)
-        else:
-            fstar, cstar = func(xstar)
+    # FIXME: because of bug exists in all except SNOPT, also none return cstar
+    # if optimizer.name != 'SNOPT':
+    if gradients:
+        fstar, cstar, _, _ = func(xstar)
+    else:
+        fstar, cstar = func(xstar)
+
+    # FIXME: handle multiobjective NSGA2
+    if nf > 1 and optimizer.name == 'NSGA-II':
+        xstar = []
+        fstar = []
+        cstar = []
+        with open('nsga2_final_pop.out') as f:
+            # skip first two lines
+            f.readline()
+            f.readline()
+            for line in f:
+                values = line.split()
+                rank = values[nx + nc + nf + 1]
+                if rank == "1":
+                    fstar.append(np.array(values[:nf]).astype(np.float))
+                    cstar.append(np.array(values[nf:nf+nc]).astype(np.float))
+                    xstar.append(np.array(values[nf+nc:nf+nc+nx]).astype(np.float))
+
+        xstar = np.array(xstar)
+        fstar = np.array(fstar)
+        cstar = -np.array(cstar)  # negative sign because of nsga definition
+
+    if nc > 0:
+        info['max-c-vio'] = max(np.amax(cstar), 0.0)
 
     return xstar, fstar, info
