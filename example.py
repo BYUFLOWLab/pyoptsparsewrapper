@@ -96,7 +96,6 @@ optimizer = SNOPT()
 xopt, fopt, info = optimize(obj, x0, lb, ub, optimizer, A, b)
 print 'linear constraints:', xopt, fopt, info
 
-print
 
 # ------ constrained problem ---------
 
@@ -191,25 +190,50 @@ optimizer = SNOPT()
 xopt, fopt, info = optimize(barnes, x0, lb, ub, optimizer)
 print 'barnes:', xopt, fopt, info
 
-# --------- multiobjective ----------
 
-def multiobj(x):
 
-    f = np.zeros(2)
-    f[0] = (x[0]+2)**2 + (x[1]+2)**2 - 10
-    f[1] = (x[0]-2)**2 + (x[1]-2)**2 + 20
 
-    c = [x[0] - 1]
+# ------- passing arguments
+
+
+def rosenarg(x, a, b):
+
+    f = (1 - x[0])**2 + 100*(x[1] - x[0]**2)**2 + a + b
+    c = []
 
     return f, c
 
+
 x0 = [4.0, 4.0]
-ub = [20.0, 20.0]
-lb = [-20.0, -20.0]
+ub = [5.0, 5.0]
+lb = [-5.0, -5.0]
 
-optimizer = NSGA2()
-optimizer.setOption('maxGen', 200)
+optimizer = SNOPT()
 
-xopt, fopt, info = optimize(multiobj, x0, lb, ub, optimizer)
-print 'NSGA2:', xopt, fopt, info
+xopt, fopt, info = optimize(rosenarg, x0, lb, ub, optimizer, args=(3.0, 4.0))
+print 'args:', xopt, fopt, info
 
+
+# TODO: this example works but there is a bug in pyopt preventing
+# NSGA2 from being called twice in the same script.
+# # --------- multiobjective ----------
+
+# def multiobj(x):
+
+#     f = np.zeros(2)
+#     f[0] = (x[0]+2)**2 + (x[1]+2)**2 - 10
+#     f[1] = (x[0]-2)**2 + (x[1]-2)**2 + 20
+
+#     c = [x[0] - 1]
+
+#     return f, c
+
+# x0 = [4.0, 4.0]
+# ub = [20.0, 20.0]
+# lb = [-20.0, -20.0]
+
+# optimizer = NSGA2()
+# optimizer.setOption('maxGen', 200)
+
+# xopt, fopt, info = optimize(multiobj, x0, lb, ub, optimizer)
+# print 'NSGA2:', xopt, fopt, info

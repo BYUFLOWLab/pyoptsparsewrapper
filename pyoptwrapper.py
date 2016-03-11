@@ -3,13 +3,13 @@ import warnings
 import numpy as np
 
 
-def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
+def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
 
     global fcalls  # keep track of function calls myself, seems to be an error in pyopt
     fcalls = 1
 
     # evalute initial point to get size information and determine if gradients included
-    out = func(x0)
+    out = func(x0, *args)
     if len(out) == 4:
         gradients = True
         f, c, _, _ = out
@@ -36,13 +36,13 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
         outputs = {}
 
         if gradients:
-            f, c, df, dc = func(x)
+            f, c, df, dc = func(x, *args)
             # these gradients aren't directly used in this function but we will save them for later
             outputs['g-obj'] = df
             outputs['g-con'] = dc
             outputs['g-x'] = x
         else:
-            f, c = func(x)
+            f, c = func(x, *args)
 
         outputs['con'] = c
 
@@ -61,7 +61,7 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
 
         # check if this was the x-location we just evaluated from func (should never happen)
         if not np.array_equal(xdict['x'], fdict['g-x']):
-            f, c, df, dc = func(xdict['x'])
+            f, c, df, dc = func(xdict['x'], *args)
             global fcalls
             fcalls += 1
         else:
@@ -125,7 +125,8 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
     info = {}
     info['fcalls'] = fcalls
     info['time'] = sol.optTime
-    info['code'] = sol.optInform
+    if sol.optInform:
+        info['code'] = sol.optInform
 
     # FIXME: bug in how output of NLPQLP is returned
     if optimizer.name == 'NLPQLP':
@@ -137,9 +138,9 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[]):
     # FIXME: because of bug exists in all except SNOPT, also none return cstar
     # if optimizer.name != 'SNOPT':
     if gradients:
-        fstar, cstar, _, _ = func(xstar)
+        fstar, cstar, _, _ = func(xstar, *args)
     else:
-        fstar, cstar = func(xstar)
+        fstar, cstar = func(xstar, *args)
 
     # FIXME: handle multiobjective NSGA2
     if nf > 1 and optimizer.name == 'NSGA-II':
