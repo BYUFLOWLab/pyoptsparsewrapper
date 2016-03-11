@@ -29,7 +29,7 @@ Syntax is similar to Matlab's fmincon, except the linear constraints are optiona
 ```python
 from pyoptwrapper import optimize
 
-xopt, fopt, info = optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[])
+xopt, fopt, info = optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[])
 ```
 
 Inputs:
@@ -41,6 +41,7 @@ Inputs:
 - `optimizer`: optimizer to use from pyoptsparse
 - `A` and `b`: linear inequality constaints of form: A x <= b
 - `Aeq` and `beq`: linear equality constaints of form: Aeq x = beq
+- `args`: a tuple of extra arguments to pass into func (optional)
 
 
 Outputs:
@@ -53,7 +54,7 @@ Outputs:
     - `time`: time spent in optimization
     - `code` an output code, if any, returned by the optimizer
 
-The function func should be of one of the following two form:
+The function func should be of one of the following two forms:
 ```
 [f, c] = func(x)
 
@@ -65,6 +66,6 @@ The function func should be of one of the following two form:
 - `gf` is an array of the gradients of f (not used in multiobj case)
 - `gc` is the gradients of the constraints and is of size (len(c), len(x)).  
 
-The script will automatically detect if gradients are provided or not.
+The script will automatically detect if gradients are provided or not.  func can accept extra arguments, you pass those in with the args option.
 
 See example.py for examples.
