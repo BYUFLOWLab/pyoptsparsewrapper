@@ -11,11 +11,13 @@ def rosen(x):
 
     f = (1 - x[0])**2 + 100*(x[1] - x[0]**2)**2
     c = []
+    ceq = []
 
     gf = [2*(1 - x[0])*-1 + 200*(x[1] - x[0]**2)*-2*x[0], 200*(x[1] - x[0]**2)]
     gc = []
+    gceq = []
 
-    return f, c, gf, gc
+    return f, c, ceq, gf, gc, gceq
 
 
 x0 = [4.0, 4.0]
@@ -59,8 +61,9 @@ def rosen(x):
 
     f = (1 - x[0])**2 + 100*(x[1] - x[0]**2)**2
     c = []
+    ceq = []
 
-    return f, c
+    return f, c, ceq
 
 
 
@@ -83,8 +86,9 @@ b = np.array([2.0, 2.0, 3.0])
 def obj(x):
     ff = 0.5*np.dot(x, np.dot(H, x)) + np.dot(f, x)
     c = []
+    ceq = []
 
-    return ff, c
+    return ff, c, ceq
 
 x0 = [4.0, 4.0]
 ub = [100.0, 100.0]
@@ -179,7 +183,7 @@ def barnes(x):
 
     # dcdx = np.transpose(dcdx)  # matlab format
 
-    return f/30.0, c, dfdx/30.0, dcdx
+    return f/30.0, c, [], dfdx/30.0, dcdx, []
 
 
 x0 = np.array([10.0, 10.0])
@@ -200,8 +204,9 @@ def rosenarg(x, a, b):
 
     f = (1 - x[0])**2 + 100*(x[1] - x[0]**2)**2 + a + b
     c = []
+    ceq = []
 
-    return f, c
+    return f, c, ceq
 
 
 x0 = [4.0, 4.0]
@@ -212,6 +217,73 @@ optimizer = SNOPT()
 
 xopt, fopt, info = optimize(rosenarg, x0, lb, ub, optimizer, args=(3.0, 4.0))
 print 'args:', xopt, fopt, info
+
+
+# ------ equality constraints -------
+
+def barneseq(x):
+
+    f, c, [], gf, gc, [] = barnes(x)
+
+    x1 = x[0]
+    x2 = x[1]
+    y1 = x1*x2
+    y4 = x1**2
+
+    c = np.zeros(3)
+    c[0] = 1 - y1/700.0
+    c[1] = y4/25.0**2 - x2/5.0
+    c[2] = (x1/500.0- 0.11) - (x2/50.0-1)**2
+
+    ceq = np.zeros(2)
+    ceq[0] = x1**2 + x2**2 - 3000
+    ceq[1] = x1 + 2*x2 - 120
+
+    return f, c, ceq
+
+x0 = np.array([10.0, 10.0])
+lb = np.array([0.0, 0.0])
+ub = np.array([65.0, 70.0])
+
+optimizer = SNOPT()
+xopt, fopt, info = optimize(barneseq, x0, lb, ub, optimizer)
+print 'barneseq:', xopt, fopt, info
+
+
+
+def barneseqgrad(x):
+
+    f, c, [], gf, gc, [] = barnes(x)
+
+    x1 = x[0]
+    x2 = x[1]
+    y1 = x1*x2
+    y4 = x1**2
+
+    c = np.zeros(3)
+    c[0] = 1 - y1/700.0
+    c[1] = y4/25.0**2 - x2/5.0
+    c[2] = (x1/500.0- 0.11) - (x2/50.0-1)**2
+
+    ceq = np.zeros(2)
+    ceq[0] = x1**2 + x2**2 - 3000
+    ceq[1] = x1 + 2*x2 - 120
+
+    gceq = np.zeros((2, 2))
+    gceq[0, 0] = 2*x1
+    gceq[0, 1] = 2*x2
+    gceq[1, 0] = 1.0
+    gceq[1, 1] = 2.0
+
+    return f, c, ceq, gf, gc, gceq
+
+x0 = np.array([10.0, 10.0])
+lb = np.array([0.0, 0.0])
+ub = np.array([65.0, 70.0])
+
+optimizer = SNOPT()
+xopt, fopt, info = optimize(barneseqgrad, x0, lb, ub, optimizer)
+print 'barneseqgrad:', xopt, fopt, info
 
 
 # TODO: this example works but there is a bug in pyopt preventing

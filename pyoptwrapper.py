@@ -10,15 +10,16 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
 
     # evalute initial point to get size information and determine if gradients included
     out = func(x0, *args)
-    if len(out) == 4:
+    if len(out) == 6:
         gradients = True
-        f, c, _, _ = out
+        f, c, ceq, _, _, _ = out
     else:
         gradients = False
-        f, c = out
+        f, c, ceq = out
 
     nx = len(x0)
     nc = len(c)
+    nceq = len(ceq)
     nlin = len(b)
     nleq = len(beq)
     if hasattr(f, "__len__"):
@@ -36,15 +37,17 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
         outputs = {}
 
         if gradients:
-            f, c, df, dc = func(x, *args)
+            f, c, ceq, df, dc, dceq = func(x, *args)
             # these gradients aren't directly used in this function but we will save them for later
             outputs['g-obj'] = df
             outputs['g-con'] = dc
+            outputs['g-con-eq'] = dceq
             outputs['g-x'] = x
         else:
-            f, c = func(x, *args)
+            f, c, ceq = func(x, *args)
 
         outputs['con'] = c
+        outputs['con-eq'] = ceq
 
         if nf == 1:
             outputs['obj'] = f
@@ -61,12 +64,13 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
 
         # check if this was the x-location we just evaluated from func (should never happen)
         if not np.array_equal(xdict['x'], fdict['g-x']):
-            f, c, df, dc = func(xdict['x'], *args)
+            f, c, ceq, df, dc, dceq = func(xdict['x'], *args)
             global fcalls
             fcalls += 1
         else:
             df = fdict['g-obj']
             dc = fdict['g-con']
+            dceq = fdict['g-con-eq']
 
         # populate gradients (the multiobjective optimizers don't use gradients so no change needed here)
         gout = {}
@@ -74,6 +78,8 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
         gout['obj']['x'] = df
         gout['con'] = {}
         gout['con']['x'] = dc
+        gout['con-eq'] = {}
+        gout['con-eq']['x'] = dceq
 
         fail = False
 
@@ -96,6 +102,9 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
     # add nonlinear constraints
     if nc > 0:
         optProb.addConGroup('con', nc, upper=0.0)
+
+    if nceq > 0:
+        optProb.addConGroup('con-eq', nceq, upper=0.0, lower=0.0)
 
     # add linear inequality constraints
     if nlin > 0:
@@ -138,15 +147,16 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
     # FIXME: because of bug exists in all except SNOPT, also none return cstar
     # if optimizer.name != 'SNOPT':
     if gradients:
-        fstar, cstar, _, _ = func(xstar, *args)
+        fstar, cstar, ceqstar, _, _, _ = func(xstar, *args)
     else:
-        fstar, cstar = func(xstar, *args)
+        fstar, cstar, ceqstar = func(xstar, *args)
 
     # FIXME: handle multiobjective NSGA2
     if nf > 1 and optimizer.name == 'NSGA-II':
         xstar = []
         fstar = []
         cstar = []
+        # TODO: currently it ignores equality constraints.
         with open('nsga2_final_pop.out') as f:
             # skip first two lines
             f.readline()
@@ -163,7 +173,11 @@ def optimize(func, x0, lb, ub, optimizer, A=[], b=[], Aeq=[], beq=[], args=[]):
         fstar = np.array(fstar)
         cstar = -np.array(cstar)  # negative sign because of nsga definition
 
+    max_c_vio = 0.0
     if nc > 0:
-        info['max-c-vio'] = max(np.amax(cstar), 0.0)
+        max_c_vio = max(np.amax(cstar), max_c_vio)
+    if nceq > 0:
+        max_c_vio = max(np.amax(np.abs(ceqstar)), max_c_vio)
+    info['max-c-vio'] = max_c_vio
 
     return xstar, fstar, info

@@ -56,15 +56,17 @@ Outputs:
 
 The function func should be of one of the following two forms:
 ```
-[f, c] = func(x)
+[f, c, ceq] = func(x)
 
-[f, c, gf, gc] = func(x)
+[f, c, ceq, gf, gc, gceq] = func(x)
 ```
 
 - `f` function value (or a function array if a multiobjective problem)
-- `c` is an array of constraints of the form c(x) <= 0
+- `c` is an array of inequality constraints of the form c(x) <= 0
+- `ceq` is an array of equality constraints of the form ceq(x) == 0
 - `gf` is an array of the gradients of f (not used in multiobj case)
-- `gc` is the gradients of the constraints and is of size (len(c), len(x)).  
+- `gc` is the gradients of the inequality constraints and is of size (len(c), len(x)).  
+- `gceq` is the gradients of the equality constraints and is of size (len(ceq), len(x)).  
 
 The script will automatically detect if gradients are provided or not.  func can accept extra arguments, you pass those in with the args option.
 
